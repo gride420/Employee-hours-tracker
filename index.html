@@ -20,7 +20,6 @@ label{display:block;font-weight:700;margin:14px 0 7px}select,input{width:100%;mi
 <meta name="theme-color" content="#192f46">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Employee Hours Tracker">
 </head>
 <body>
@@ -89,12 +88,10 @@ function attachHoursListener(input){
     if(input.dataset.unlocked==="true"){
       saveCurrentDraft();
       update();
-    }else{
-      handleProtectedInput({target:input});
     }
   });
-  input.addEventListener("change",update);
 }
+
 
 function beginProtectedInput(input){
   if(input.dataset.unlocked==="true"){
@@ -110,10 +107,30 @@ function beginProtectedInput(input){
   input.dataset.passwordMode="true";
 }
 
+let passwordInputTarget=null;
+
+function askForHoursPassword(input){
+  passwordInputTarget=input;
+  input.value="";
+  input.type="tel";
+  input.inputMode="numeric";
+  input.maxLength=4;
+  input.placeholder="Enter password";
+  input.dataset.enteringPassword="true";
+  input.focus();
+}
+
 function handleProtectedInput(e){
   const input=e.target;
+
   if(input.dataset.unlocked==="true"){
+    saveCurrentDraft();
     update();
+    return;
+  }
+
+  if(input.dataset.enteringPassword!=="true"){
+    askForHoursPassword(input);
     return;
   }
 
@@ -121,37 +138,38 @@ function handleProtectedInput(e){
 
   if(input.value.length===4){
     if(input.value==="4187"){
-      const replacement=document.createElement("input");
-      replacement.id=input.id;
-      replacement.type="number";
-      replacement.inputMode="decimal";
-      replacement.step="0.01";
-      replacement.className="entry hours-mode";
-      replacement.placeholder=input.id==="hours"?"Enter hours":"Enter PTO hours";
-      replacement.dataset.unlocked="true";
-      replacement.value=input.dataset.savedValue||"";
-      input.replaceWith(replacement);
-      attachHoursListener(replacement);
-      replacement.focus();
+      const saved=input.dataset.savedValue||"";
+      input.value=saved;
+      input.type="number";
+      input.inputMode="decimal";
+      input.maxLength="";
+      input.placeholder=input.id==="hours"?"Enter hours":"Enter PTO hours";
+      input.dataset.unlocked="true";
+      input.dataset.enteringPassword="";
+      input.focus();
+      input.select();
+      update();
     }else{
       input.value="";
       input.placeholder="Incorrect password";
-      setTimeout(function(){input.placeholder="Enter password";},1000);
+      setTimeout(function(){
+        input.placeholder="Enter password";
+        input.focus();
+      },700);
     }
   }
 }
 
 ["hours","pto1","pto2"].forEach(function(id){
   const input=$(id);
-  input.addEventListener("focus",function(){beginProtectedInput(input);});
-  input.addEventListener("click",function(){beginProtectedInput(input);});
-  attachHoursListener(input);
-});
-
-document.addEventListener("click",function(e){
-  const input=e.target;
-  if(input && ["hours","pto1","pto2"].includes(input.id) && input.dataset.unlocked!=="true"){
-    beginProtectedInput(input);
+  if(input){
+    input.addEventListener("focus",function(){
+      if(input.dataset.unlocked!=="true") askForHoursPassword(input);
+    });
+    input.addEventListener("click",function(){
+      if(input.dataset.unlocked!=="true") askForHoursPassword(input);
+    });
+    input.addEventListener("input",handleProtectedInput);
   }
 });
 

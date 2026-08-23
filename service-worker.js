@@ -1,14 +1,10 @@
-const CACHE="employee-hours-tracker-v1";
+const CACHE="employee-hours-tracker-v2";
 const ASSETS=["./","./index.html","./manifest.json"];
-self.addEventListener("install",event=>{
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
+self.addEventListener("install",e=>{
+  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
   self.skipWaiting();
 });
-self.addEventListener("activate",event=>{
-  event.waitUntil(self.clients.claim());
-});
-self.addEventListener("fetch",event=>{
-  event.respondWith(
-    caches.match(event.request).then(cached=>cached || fetch(event.request))
-  );
+self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch",e=>{
+  e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));
 });
