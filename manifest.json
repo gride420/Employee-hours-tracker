@@ -1,0 +1,10 @@
+{
+  "name": "Employee Hours Tracker",
+  "short_name": "Hours Tracker",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#192f46",
+  "orientation": "portrait",
+  "description": "Employee Hours Tracker with pay periods, PTO, saved entries and protected editing."
+}

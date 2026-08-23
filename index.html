@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Employee Tracker</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7;font-family:Arial,sans-serif;color:#17202a}
+.app{max-width:720px;margin:auto;padding:16px}.header{background:#17324d;color:#fff;border-radius:14px;padding:20px;margin-bottom:14px}
+.header h1{margin:0;font-size:28px}.header p{margin:5px 0 0;opacity:.85}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.tab{min-height:48px;border:0;border-radius:10px;background:#dfe5ea;font-size:16px;font-weight:700}.tab.active{background:#17324d;color:#fff}
+.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+label{display:block;font-weight:700;margin:14px 0 7px}select,input{width:100%;min-height:48px;border:1px solid #cbd3da;border-radius:9px;padding:12px;font-size:16px;background:#fff}
+.entry{font-size:16px;color:#66737e}.entry.password-mode{text-align:left}.entry.hours-mode{color:#17202a}
+.action{width:100%;min-height:48px;border:0;border-radius:9px;background:#17324d;color:#fff;font-weight:700;font-size:16px}.clear{background:#8b1e1e;margin-top:8px}
+.row{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid #e4e8eb}.row:last-child{border-bottom:0}.row b{font-size:18px}
+.hidden{display:none!important}.error{color:#b42318;font-weight:700;font-size:13px;margin-top:6px}.ok{color:#177245;font-weight:700;font-size:13px;margin-top:6px}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#192f46">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Employee Hours Tracker">
+</head>
+<body>
+<div class="app">
+<div class="header"><h1>Employee Tracker</h1><p>Quarter: July 4 – October 2</p></div>
+<div class="tabs"><button class="tab active" data-location="W17">W17</button><button class="tab" data-location="W39">W39</button><button class="tab" data-location="Personal">Personal</button></div>
+
+<div class="card">
+<b id="limitLabel">W17 Total Allowed: 975 Hours</b>
+<label>Pay Period</label>
+<select id="period"><option>Jul 4 – Jul 10 (1 Week)</option><option>Jul 11 – Jul 24</option><option>Jul 25 – Aug 7</option><option>Aug 8 – Aug 21</option><option>Aug 22 – Sep 4</option><option>Sep 5 – Sep 18</option><option>Sep 19 – Oct 2</option></select>
+
+<label>Total Employee Hours</label>
+<input id="hours" class="entry password-mode" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Tap to enter hours" autocomplete="off">
+
+<div id="ptoSection">
+<label>PTO Hours — Daily Roberts</label>
+<input id="pto1" class="entry password-mode" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Tap to enter PTO hours" autocomplete="off">
+<label id="ptoSecondLabel">PTO Hours — Ray Young</label>
+<input id="pto2" class="entry password-mode" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Tap to enter PTO hours" autocomplete="off">
+</div>
+
+<button id="save" class="action" type="button" style="margin-top:16px">Save Pay Period</button>
+<button id="clear" class="action clear" type="button">Clear This Pay Period</button>
+<div id="status"></div>
+</div>
+
+<div class="card">
+<div class="row"><span>Total Hours Allowed</span><b id="allowed">975</b></div>
+<div class="row"><span>Total Hours Inputted</span><b id="inputted">0</b></div>
+<div id="personalRemainingRow" class="row hidden"><span>Total Hours Remaining</span><b id="personalRemaining">585</b></div>
+<div id="ptoTotalRow" class="row"><span>PTO Hours Total</span><b id="ptoTotal">0</b></div>
+<div id="afterPtoRow" class="row hidden"><span>Total Hours Inputted After PTO</span><b id="afterPto">0</b></div>
+<div id="remainingRow" class="row"><span>Total Hours Remaining</span><b id="remaining">975</b></div>
+<div id="valueRow" class="row"><span>Remaining Hours × $15/hour</span><b id="value">$14,625.00</b></div>
+</div>
+</div>
+
+<div class="card" id="historyCard">
+<h2 style="margin:0 0 12px">Entry Log</h2>
+<div id="historyList"><div class="small">Nothing entered yet.</div></div>
+</div>
+
+<div id="clearPasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:min(360px,100%);box-shadow:0 10px 40px rgba(0,0,0,.25)">
+    <h3 style="margin:0 0 10px">Password Required</h3>
+    <div style="margin-bottom:12px;color:#555">Enter the password to clear this pay period.</div>
+    <input id="clearPasswordInput" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+      autocomplete="off" placeholder="Enter password"
+      style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ccc;border-radius:10px;font-size:20px">
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button id="cancelClearPassword" type="button" style="flex:1;padding:13px;border:0;border-radius:10px">Cancel</button>
+      <button id="confirmClearPassword" type="button" style="flex:1;padding:13px;border:0;border-radius:10px;background:#192f46;color:white">Clear</button>
+    </div>
+    <div id="clearPasswordError" style="display:none;color:#a11;margin-top:10px">Incorrect password.</div>
+  </div>
+</div>
+<script>
+const limits={W17:975,W39:975,Personal:585};
+const ptoNames={W17:["Daily Roberts","Ray Young"],W39:["Daily Roberts","Amari Jordan"]};
+let current="W17";
+const $=id=>document.getElementById(id);
+function fmt(n){return Number(n||0).toFixed(2).replace(/\.00$/,"")}
+function attachHoursListener(input){
+  input.addEventListener("input",function(){
+    if(input.dataset.unlocked==="true"){
+      saveCurrentDraft();
+      update();
+    }else{
+      handleProtectedInput({target:input});
+    }
+  });
+  input.addEventListener("change",update);
+}
+
+function beginProtectedInput(input){
+  if(input.dataset.unlocked==="true"){
+    input.focus();
+    return;
+  }
+  input.type="tel";
+  input.inputMode="numeric";
+  input.pattern="[0-9]*";
+  input.maxLength=4;
+  input.value="";
+  input.placeholder="Enter password";
+  input.dataset.passwordMode="true";
+}
+
+function handleProtectedInput(e){
+  const input=e.target;
+  if(input.dataset.unlocked==="true"){
+    update();
+    return;
+  }
+
+  input.value=input.value.replace(/\D/g,"").slice(0,4);
+
+  if(input.value.length===4){
+    if(input.value==="4187"){
+      const replacement=document.createElement("input");
+      replacement.id=input.id;
+      replacement.type="number";
+      replacement.inputMode="decimal";
+      replacement.step="0.01";
+      replacement.className="entry hours-mode";
+      replacement.placeholder=input.id==="hours"?"Enter hours":"Enter PTO hours";
+      replacement.dataset.unlocked="true";
+      replacement.value=input.dataset.savedValue||"";
+      input.replaceWith(replacement);
+      attachHoursListener(replacement);
+      replacement.focus();
+    }else{
+      input.value="";
+      input.placeholder="Incorrect password";
+      setTimeout(function(){input.placeholder="Enter password";},1000);
+    }
+  }
+}
+
+["hours","pto1","pto2"].forEach(function(id){
+  const input=$(id);
+  input.addEventListener("focus",function(){beginProtectedInput(input);});
+  input.addEventListener("click",function(){beginProtectedInput(input);});
+  attachHoursListener(input);
+});
+
+document.addEventListener("click",function(e){
+  const input=e.target;
+  if(input && ["hours","pto1","pto2"].includes(input.id) && input.dataset.unlocked!=="true"){
+    beginProtectedInput(input);
+  }
+});
+
+function getPersonalSavedEntry(){
+  try{
+    const logs=JSON.parse(localStorage.getItem("employeeTrackerEntryLog")||"[]");
+    return logs.find(r=>r.location===current && r.period===$("period").value)||null;
+  }catch(e){return null}
+}
+
+function update(){
+  const personal=current==="Personal";
+  const lim=limits[current];
+  const saved=getSavedEntryForCurrentPeriod();
+
+  const fieldH=Math.max(0,Number($("hours").value)||0);
+  const fieldP1=Math.max(0,Number($("pto1").value)||0);
+  const fieldP2=Math.max(0,Number($("pto2").value)||0);
+  const hasLiveInput=fieldH>0 || fieldP1>0 || fieldP2>0;
+
+  const h=hasLiveInput ? fieldH : (saved?.employeeHours||0);
+  const p1=hasLiveInput ? fieldP1 : (saved?.pto1||0);
+  const p2=hasLiveInput ? fieldP2 : (saved?.pto2||0);
+  const pto=p1+p2;
+  const after=Math.max(0,h-pto);
+
+  const periodIndex=$("period").selectedIndex;
+  const logs=getLog().filter(r=>r.location===current);
+  let used=0;
+
+  logs.forEach(r=>{
+    const idx=Array.from($("period").options).findIndex(o=>o.textContent===r.period);
+    if(idx>=0 && idx<periodIndex){
+      used += (Number(r.employeeHours)||0)+(Number(r.ptoTotal)||0);
+    }
+  });
+
+  // Add the selected period's current/saved hours exactly once.
+  used += h+pto;
+
+  const remaining=Math.max(0,lim-used);
+
+  $("limitLabel").textContent=current+" Total Allowed: "+lim+" Hours";
+  $("allowed").textContent=lim;
+  $("inputted").textContent=fmt(h);
+
+  $("ptoSection").classList.toggle("hidden",personal);
+  $("ptoTotalRow").classList.toggle("hidden",personal);
+  $("afterPtoRow").classList.toggle("hidden",personal || pto<=0);
+  $("remainingRow").classList.toggle("hidden",personal);
+  $("valueRow").classList.toggle("hidden",personal);
+
+  $("personalRemaining").textContent=fmt(remaining);
+  $("personalRemainingRow").classList.toggle("hidden",!personal);
+
+  $("ptoTotal").textContent=fmt(pto);
+  $("afterPto").textContent=fmt(after);
+  $("remaining").textContent=fmt(remaining);
+  $("value").textContent="$"+(remaining*15).toLocaleString("en-US",{minimumFractionDigits:2});
+  $("ptoSecondLabel").textContent="PTO Hours — "+(ptoNames[current]?.[1]||"");
+}
+
+function getSavedEntryForCurrentPeriod(){
+  try{
+    const logs=JSON.parse(localStorage.getItem("employeeTrackerEntryLog")||"[]");
+    return logs.find(r=>r.location===current && r.period===$("period").value)||null;
+  }catch(e){
+    return null;
+  }
+}
+
+
+
+document.querySelectorAll(".tab").forEach(tab=>tab.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));tab.classList.add("active");current=tab.dataset.location;
+  clearCurrentEntryFields();
+  update();renderLog();
+}));
+function clearCurrentEntryFields(){
+  ["hours","pto1","pto2"].forEach(function(id){
+    const i=$(id);
+    if(i){
+      i.value="";
+      i.dataset.unlocked="";
+      i.dataset.passwordMode="";
+      i.type="tel";
+      i.inputMode="numeric";
+      i.maxLength=4;
+      i.placeholder="Tap to enter "+(id==="hours"?"hours":"PTO hours");
+    }
+  });
+}
+
+const DRAFT_KEY="employeeTrackerPayPeriodDrafts";
+
+function getDrafts(){
+  try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||"{}")}catch(e){return{}}
+}
+function setDrafts(d){localStorage.setItem(DRAFT_KEY,JSON.stringify(d))}
+
+function draftKey(){
+  return current+"||"+$("period").value;
+}
+
+function saveCurrentDraft(){
+  const h=$( "hours"), p1=$("pto1"), p2=$("pto2");
+  const unlocked=(x)=>x && x.dataset.unlocked==="true";
+  const drafts=getDrafts();
+
+  // Only preserve actual entered hours, never the password field.
+  drafts[draftKey()]={
+    hours:unlocked(h)?(h.value||""):"",
+    pto1:unlocked(p1)?(p1.value||""):"",
+    pto2:unlocked(p2)?(p2.value||""):""
+  };
+  setDrafts(drafts);
+}
+
+function deleteCurrentDraft(){
+  const drafts=getDrafts();
+  delete drafts[draftKey()];
+  setDrafts(drafts);
+}
+
+function getCurrentDraft(){
+  return getDrafts()[draftKey()]||null;
+}
+
+function setRestoredLockedInput(id,value){
+  const old=$(id);
+  if(!old)return;
+  old.value="";
+  old.type="tel";
+  old.inputMode="numeric";
+  old.pattern="[0-9]*";
+  old.maxLength=4;
+  old.placeholder="Tap to enter "+(id==="hours"?"hours":"PTO hours");
+  old.dataset.unlocked="";
+  old.dataset.passwordMode="";
+  old.dataset.savedValue=value==null?"":String(value);
+}
+
+function loadCurrentPeriodFields(){
+  const saved=getSavedEntryForCurrentPeriod();
+  const draft=getCurrentDraft();
+  const rec=draft || saved;
+
+  clearCurrentEntryFields();
+
+  if(rec){
+    setRestoredLockedInput("hours",rec.hours!==undefined?rec.hours:rec.employeeHours);
+    if(current!=="Personal"){
+      setRestoredLockedInput("pto1",rec.pto1||"");
+      setRestoredLockedInput("pto2",rec.pto2||"");
+    }
+  }
+}
+
+$("period").addEventListener("change",function(){
+  // Keep the hours for the period being left, then load the selected period's
+  // saved/draft hours when returning to it.
+  saveCurrentDraft();
+  loadCurrentPeriodFields();
+  update();
+  renderLog();
+});
+
+
+
+const LOG_KEY="employeeTrackerEntryLog";
+
+function getLog(){
+  try{return JSON.parse(localStorage.getItem(LOG_KEY)||"[]")}catch(e){return[]}
+}
+function setLog(log){localStorage.setItem(LOG_KEY,JSON.stringify(log))}
+
+function makeLogEntry(){
+  const h=Number($("hours").value)||0;
+  const p1=Number($("pto1").value)||0;
+  const p2=Number($("pto2").value)||0;
+  const pto=p1+p2;
+  const after=Math.max(0,h-pto);
+
+  // Each saved pay period carries forward all prior employee hours and PTO.
+  const periodIndex=$("period").selectedIndex;
+  const logs=getLog().filter(r=>r.location===current);
+  let totalUsed=h+pto;
+
+  logs.forEach(r=>{
+    if(r.period===$("period").value) return;
+    const idx=Array.from($("period").options).findIndex(o=>o.textContent===r.period);
+    if(idx>=0 && idx<periodIndex){
+      totalUsed += (Number(r.employeeHours)||0)+(Number(r.ptoTotal)||0);
+    }
+  });
+
+  const remaining=Math.max(0,limits[current]-totalUsed);
+
+  return {
+    location:current,
+    period:$("period").value,
+    employeeHours:h,
+    pto1:p1,
+    pto2:p2,
+    ptoTotal:pto,
+    afterPto:after,
+    remaining:remaining,
+    value:remaining*15
+  };
+}
+
+function renderLog(){
+  const list=$("historyList");
+  const log=getLog().filter(r=>r.location===current);
+
+  if(!log.length){
+    list.innerHTML='<div class="small">Nothing entered for '+current+' yet.</div>';
+    return;
+  }
+
+  list.innerHTML=log.map(r=>{
+    if(r.location==="Personal"){
+      return `<div style="border:1px solid #e1e6ea;border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;gap:10px">
+          <b>Personal</b><b>${r.period}</b>
+        </div>
+        <div class="small" style="margin-top:8px">Total Hours Inputted: <b>${fmt(r.employeeHours)}</b></div>
+      </div>`;
+    }
+
+    const second=ptoNames[r.location]?.[1]||"";
+    return `<div style="border:1px solid #e1e6ea;border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;gap:10px"><b>${r.location}</b><b>${r.period}</b></div>
+      <div class="small">Total Hours Inputted: ${fmt(r.employeeHours)}</div>
+      <div class="small">Daily Roberts PTO: ${fmt(r.pto1)}</div>
+      <div class="small">${second} PTO: ${fmt(r.pto2)}</div>
+      <div class="small">PTO Hours Total: ${fmt(r.ptoTotal)}</div>
+      <div class="small">Hours After PTO: ${fmt(r.afterPto)}</div>
+      <div class="small">Total Hours Remaining: ${fmt(r.remaining)}</div>
+      <div class="small">Remaining Hours × $15: $${r.value.toLocaleString("en-US",{minimumFractionDigits:2})}</div>
+    </div>`;
+  }).join("");
+}
+
+$("save").addEventListener("click",function(){
+  const entry=makeLogEntry();
+  let log=getLog();
+
+  const index=log.findIndex(r=>r.location===entry.location && r.period===entry.period);
+  if(index>=0) log[index]=entry;
+  else log.push(entry);
+
+  // Recalculate the remaining balance for every saved pay period in order.
+  const options=Array.from($("period").options);
+  const locationEntries=log
+    .filter(r=>r.location===current)
+    .sort((a,b)=>{
+      const ai=options.findIndex(o=>o.textContent===a.period);
+      const bi=options.findIndex(o=>o.textContent===b.period);
+      return ai-bi;
+    });
+
+  let used=0;
+  locationEntries.forEach(r=>{
+    used += (Number(r.employeeHours)||0) + (Number(r.ptoTotal)||0);
+    r.remaining=Math.max(0,limits[current]-used);
+    r.value=r.remaining*15;
+  });
+
+  setLog(log);
+  deleteCurrentDraft();
+  renderLog();
+  update();
+  $("status").textContent="Saved to entry log.";
+  $("status").className="ok";
+});
+
+function clearPayPeriodFields(){
+  ["hours","pto1","pto2"].forEach(function(id){
+    const i=$(id);
+    if(i){
+      i.value="";
+      i.dataset.unlocked="";
+      i.dataset.passwordMode="";
+      i.type="tel";
+      i.inputMode="numeric";
+      i.maxLength=4;
+      i.placeholder="Tap to enter "+(id==="hours"?"hours":"PTO hours");
+    }
+  });
+}
+
+function performClearPayPeriod(){
+  const period=$("period").value;
+  setLog(getLog().filter(r=>!(r.location===current && r.period===period)));
+  deleteCurrentDraft();
+  clearPayPeriodFields();
+  update();
+  renderLog();
+  $("status").textContent="Pay period cleared.";
+  $("status").className="ok";
+}
+
+function openClearPassword(){
+  const modal=$("clearPasswordModal");
+  const input=$("clearPasswordInput");
+  $("clearPasswordError").style.display="none";
+  input.value="";
+  modal.style.display="flex";
+  setTimeout(function(){input.focus();},100);
+}
+
+$("clear").addEventListener("click",function(){
+  openClearPassword();
+});
+
+$("cancelClearPassword").addEventListener("click",function(){
+  $("clearPasswordModal").style.display="none";
+});
+
+$("confirmClearPassword").addEventListener("click",function(){
+  const input=$("clearPasswordInput");
+  if(input.value==="4187"){
+    $("clearPasswordModal").style.display="none";
+    performClearPayPeriod();
+  }else{
+    input.value="";
+    $("clearPasswordError").style.display="block";
+    setTimeout(function(){input.focus();},50);
+  }
+});
+
+$("clearPasswordInput").addEventListener("input",function(){
+  this.value=this.value.replace(/\D/g,"").slice(0,4);
+});
+
+renderLog();
+</script>
